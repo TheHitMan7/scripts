@@ -40,10 +40,14 @@ dtb() {
   KERN_DTB="$out/arch/arm64/boot/dts/qcom/trinket.dtb"
 }
 
+# Remove out directory
+del() {
+  rm -rf $out
+}
+
 # Build kernel
 build() {
   out=$PARENT_DIR/$KERNEL_DIR/out
-  rm -rf $out
   SOURCE=$SOURCE
   cd $SOURCE
   export ARCH=arm64
@@ -53,6 +57,16 @@ build() {
   export KBUILD_BUILD_HOST=ILLYRIA
   export KBUILD_COMPILER_STRING="$(${CC} --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g')"
   make O=$out ARCH=arm64 vendor/ginkgo-perf_defconfig
+  make O=$out ARCH=arm64 \
+              CC=$CC \
+              CLANG_TRIPLE=$CLANG_TRIPLE \
+              CROSS_COMPILE=$CROSS_COMPILE \
+              CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
+              -j$(nproc --all)
+}
+
+# Retry on failed compilation
+ret() {
   make O=$out ARCH=arm64 \
               CC=$CC \
               CLANG_TRIPLE=$CLANG_TRIPLE \
@@ -75,11 +89,4 @@ zipfile() {
 sf() {
   file="$PARENT_DIR/$KERNEL_DIR/*.zip"
   scp $file codex7@frs.sourceforge.net:/home/frs/project/rigel-kernel-android/Ginkgo
-}
-
-# Execute all functions
-exec() {
-  build;
-  dtb;
-  zipfile;
 }

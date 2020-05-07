@@ -22,11 +22,25 @@ AOSP_CLANG="10.0.6"
 PROTON_CLANG="11.0.0"
 GCC="10.0.1"
 
+function select_device() {
+  read -p "Select device for kernel compile (G)inkgo/(C)urtana ? " answer
+  while true
+  do
+    case $answer in
+     [gG]* ) export WHICH_DEVICE=ginkgo
+           echo "Device selected : $WHICH_DEVICE" && break;;
+     [cC]* ) export WHICH_DEVICE=curtana
+           echo "Device selected : $WHICH_DEVICE" && break;;
+    esac
+  done
+}
+select_device;
+
 # Set defaults
-SOURCE="$PARENT_DIR/$KERNEL_DIR/source"
+SOURCE="$PARENT_DIR/$KERNEL_DIR/${WHICH_DEVICE}"
 
 # Set clang compile
-compiler() {
+function compiler() {
   read -p "Do you want to compile kernel with AOSP clang Y/N ? " answer
   while true
   do
@@ -50,35 +64,43 @@ compiler() {
 compiler;
 
 # Set compiler
-git clone https://github.com/TheHitMan7/clang.git -b master $PARENT_DIR/$KERNEL_DIR/clang 2>/dev/null;
-git clone https://github.com/TheHitMan7/aarch64-maestro-linux-android.git -b master $PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android 2>/dev/null;
-git clone https://github.com/TheHitMan7/arm-maestro-linux-gnueabi.git -b master $PARENT_DIR/$KERNEL_DIR/arm-maestro-linux-gnueabi 2>/dev/null;
-git clone https://github.com/kdrag0n/proton-clang.git -b master $PARENT_DIR/$KERNEL_DIR/proton-clang --depth=1 2>/dev/null;
+if [ "$AOSP" = "true" ]; then
+  git clone https://github.com/TheHitMan7/clang.git -b master $PARENT_DIR/$KERNEL_DIR/clang 2>/dev/null;
+  git clone https://github.com/TheHitMan7/aarch64-maestro-linux-android.git -b master $PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android 2>/dev/null;
+  git clone https://github.com/TheHitMan7/arm-maestro-linux-gnueabi.git -b master $PARENT_DIR/$KERNEL_DIR/arm-maestro-linux-gnueabi 2>/dev/null;
+else
+  git clone https://github.com/kdrag0n/proton-clang.git -b master $PARENT_DIR/$KERNEL_DIR/proton-clang --depth=1 2>/dev/null;
+fi
 
 # Set kernel source
-src() {
+function src() {
   read -p "Do you want to delete kernel source Y/N ? " answer
   while true
   do
     case $answer in
-     [yY]* ) rm -rf $SOURCE
-           echo "Kernel source deleted"
+     [yY]* ) rm -rf $SOURCE && echo "Kernel source deleted"
+           if [ "$WHICH_DEVICE" = "ginkgo" ]; then
+             git clone https://github.com/TheHitMan7/android_kernel_sm8150.git -b mainline $SOURCE 2>/dev/null;
+           fi;
+           if [ "$WHICH_DEVICE" = "curtana" ]; then
+             git clone https://github.com/TheHitMan7/android_kernel_sm7125.git -b curtana-q-oss $SOURCE 2>/dev/null;
+           fi;
            break;;
      [nN]* ) break;;
     esac
   done
 }
 src;
-git clone https://github.com/TheHitMan7/android_kernel_sm8150.git -b mainline $PARENT_DIR/$KERNEL_DIR/source 2>/dev/null;
 
 # Set AnyKernel3
-ak3_src() {
+function ak3_src() {
   read -p "Do you want to delete Anykernel ZIP Y/N ? " answer
   while true
   do
     case $answer in
      [yY]* ) rm -rf $PARENT_DIR/$KERNEL_DIR/AnyKernel3 && AK3="true"
            echo "Anykernel ZIP deleted"
+           git clone https://github.com/TheHitMan7/AnyKernel3.git -b master $PARENT_DIR/$KERNEL_DIR/AnyKernel3 2>/dev/null;
            break;;
      [nN]* ) AK3="false"
            break;;
@@ -86,16 +108,21 @@ ak3_src() {
   done
 }
 ak3_src;
-git clone https://github.com/TheHitMan7/AnyKernel3.git -b master $PARENT_DIR/$KERNEL_DIR/AnyKernel3 2>/dev/null;
 
 # Set kernel DTB
-dtb() {
+function dtb() {
   KERN_IMG="$out/arch/arm64/boot/Image.gz-dtb"
-  KERN_DTB="$out/arch/arm64/boot/dts/qcom/trinket.dtb"
+  if [ "$WHICH_DEVICE" = "ginkgo" ]; then
+    KERN_DTB_TRINKET="$out/arch/arm64/boot/dts/qcom/trinket.dtb"
+  fi;
+  if [ "$WHICH_DEVICE" = "curtana" ]; then
+    KERN_DTB_ATOLL="$out/arch/arm64/boot/dts/qcom/atoll.dtb"
+    KERN_DTB_SDMMAGPIE="$out/arch/arm64/boot/dts/qcom/sdmmagpie.dtb"
+  fi;
 }
 
 # Remove out directory
-del() {
+function del() {
   rm -rf $out
   rm -rf $PARENT_DIR/$KERNEL_DIR/RIGEL-X-*.zip
   if [ "$AK3" = "false" ]; then
@@ -105,7 +132,7 @@ del() {
 del;
 
 # Build kernel
-build() {
+function build() {
   SOURCE=$SOURCE
   cd $SOURCE
   export ARCH=arm64
@@ -114,7 +141,12 @@ build() {
   export KBUILD_BUILD_USER=TheHitMan
   export KBUILD_BUILD_HOST=ILLYRIA
   export KBUILD_COMPILER_STRING="$(${CC} --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g')"
-  make O=$out ARCH=arm64 vendor/ginkgo-perf_defconfig
+  if [ "$WHICH_DEVICE" = "ginkgo" ]; then
+    make O=$out ARCH=arm64 vendor/ginkgo-perf_defconfig
+  fi;
+  if [ "$WHICH_DEVICE" = "curtana" ]; then
+    make O=$out ARCH=arm64 vendor/curtana-perf_defconfig
+  fi;
   if [ "$AOSP" = "true" ]; then
     make O=$out ARCH=arm64 \
                 CC=$CC \
@@ -133,7 +165,7 @@ build() {
 }
 
 # Retry on failed compilation
-ret() {
+function ret() {
   if [ "$AOSP" = "true" ]; then
     make O=$out ARCH=arm64 \
                 CC=$CC \
@@ -152,7 +184,7 @@ ret() {
 }
 
 # Create flashable ZIP
-zipfile() {
+function zipfile() {
   date=`date +"%Y%m%d"`
   cp -f $KERN_IMG $PARENT_DIR/$KERNEL_DIR/AnyKernel3/Image.gz-dtb
   cd $PARENT_DIR/$KERNEL_DIR/AnyKernel3
@@ -162,12 +194,17 @@ zipfile() {
 }
 
 # Upload build to sourceforge
-sf() {
+function sf() {
   file="$PARENT_DIR/$KERNEL_DIR/*.zip"
-  scp $file codex7@frs.sourceforge.net:/home/frs/project/rigel-kernel-android/Ginkgo
+  if [ "$WHICH_DEVICE" = "ginkgo" ]; then
+    scp $file codex7@frs.sourceforge.net:/home/frs/project/rigel-kernel-android/Ginkgo
+  fi;
+  if [ "$WHICH_DEVICE" = "curtana" ]; then
+    scp $file codex7@frs.sourceforge.net:/home/frs/project/curtana-kernel-android/Curtana
+  fi;
 }
 
-mka() {
+function mka() {
   build;
   dtb;
   if [ -f "$KERN_IMG" ]; then
@@ -176,7 +213,7 @@ mka() {
   fi;
 }
 
-retry() {
+function retry() {
   ret;
   dtb;
   if [ -f "$KERN_IMG" ]; then

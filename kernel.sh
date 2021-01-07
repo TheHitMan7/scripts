@@ -17,19 +17,14 @@ KERNEL_DIR="kernel"
 out=$PARENT_DIR/$KERNEL_DIR/out
 mkdir -p $PARENT_DIR/$KERNEL_DIR 2>/dev/null;
 
-# Compiler Version
-AOSP_CLANG="10.0.6"
-PROTON_CLANG="11.0.0"
-GCC="10.0.1"
-
 function credentials() {
-  read -p "Enter username: " user
-  read -p "Enter password: " password
-  read -p "Enter host    : " host
+  read -p "Enter user: " user
+  read -p "Enter pass: " pass
+  read -p "Enter host: " host
 }
-credentials;
+credentials
 
-function select_device() {
+function device() {
   read -p "Select device for kernel compile (G)inkgo/(C)urtana ? " answer
   while true
   do
@@ -41,12 +36,9 @@ function select_device() {
     esac
   done
 }
-select_device;
+device
 
-# Set defaults
-SOURCE="$PARENT_DIR/$KERNEL_DIR/${WHICH_DEVICE}"
-
-# Set clang compile
+# Set compiler
 function compiler() {
   read -p "Do you want to compile kernel with AOSP clang Y/N ? " answer
   while true
@@ -57,33 +49,33 @@ function compiler() {
            CLANG_TRIPLE="$PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android/bin/aarch64-maestro-linux-gnu-"
            CROSS_COMPILE="$PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android/bin/aarch64-maestro-linux-gnu-"
            CROSS_COMPILE_ARM32="$PARENT_DIR/$KERNEL_DIR/arm-maestro-linux-gnueabi/bin/arm-maestro-linux-gnueabi-"
-           export AOSP="true"
            echo "Clang compiler : $WHICH_CLANG" && break;;
      [nN]* ) export WHICH_CLANG=PROTON
            CC="$PARENT_DIR/$KERNEL_DIR/proton-clang/bin/clang"
            CROSS_COMPILE="$PARENT_DIR/$KERNEL_DIR/proton-clang/bin/aarch64-linux-gnu-"
            CROSS_COMPILE_ARM32="$PARENT_DIR/$KERNEL_DIR/proton-clang/bin/arm-linux-gnueabi-"
-           export PROTON="true"
            echo "Clang compiler : $WHICH_CLANG" && break;;
     esac
   done
-}
-compiler;
-
-# Set compiler
-function toolchain() {
-  if [ "$AOSP" = "true" ]; then
+  if [ "$WHICH_CLANG" = "AOSP" ]; then
     git clone https://github.com/TheHitMan7/clang.git -b master $PARENT_DIR/$KERNEL_DIR/clang 2>/dev/null;
     git clone https://github.com/TheHitMan7/aarch64-maestro-linux-android.git -b master $PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android 2>/dev/null;
     git clone https://github.com/TheHitMan7/arm-maestro-linux-gnueabi.git -b master $PARENT_DIR/$KERNEL_DIR/arm-maestro-linux-gnueabi 2>/dev/null;
-  else
+  fi
+  if [ "$WHICH_CLANG" = "PROTON" ]; then
     git clone https://github.com/kdrag0n/proton-clang.git -b master $PARENT_DIR/$KERNEL_DIR/proton-clang --depth=1 2>/dev/null;
   fi
 }
-toolchain;
+compiler
 
 # Set kernel source
-function src() {
+function branch() {
+  read -p "Source branch: " BRANCH
+}
+branch
+
+function kernel_source() {
+  SOURCE="$PARENT_DIR/$KERNEL_DIR/${WHICH_DEVICE}"
   read -p "Do you want to delete kernel source Y/N ? " answer
   while true
   do
@@ -91,21 +83,21 @@ function src() {
      [yY]* ) rm -rf $SOURCE && echo "Kernel source deleted"
            if [ "$WHICH_DEVICE" = "ginkgo" ]; then
              echo "Cloning ginkgo kernel source"
-             git clone https://github.com/TheHitMan7/android_kernel_sm6125.git -b ginkgo-q-oss $SOURCE 2>/dev/null;
+             git clone https://github.com/TheHitMan7/android_kernel_sm6125.git -b ${BRANCH} $SOURCE 2>/dev/null;
            fi;
            if [ "$WHICH_DEVICE" = "curtana" ]; then
              echo "Cloning curtana kernel source"
-             git clone https://github.com/TheHitMan7/android_kernel_sm7125.git -b curtana-q-oss $SOURCE 2>/dev/null;
+             git clone https://github.com/TheHitMan7/android_kernel_sm7125.git -b ${BRANCH} $SOURCE 2>/dev/null;
            fi;
            break;;
      [nN]* ) break;;
     esac
   done
 }
-src;
+kernel_source
 
 # Set AnyKernel3
-function ak3_src() {
+function ak3_source() {
   read -p "Do you want to delete Anykernel ZIP Y/N ? " answer
   while true
   do
@@ -119,7 +111,7 @@ function ak3_src() {
     esac
   done
 }
-ak3_src;
+ak3_source
 
 # Set kernel DTB
 function dtb() {
@@ -140,7 +132,6 @@ function del() {
     rm -rf $PARENT_DIR/$KERNEL_DIR/AnyKernel3/Image.gz-dtb
   fi;
 }
-del;
 
 # Build kernel
 function build() {
@@ -152,7 +143,7 @@ function build() {
   export KBUILD_BUILD_USER=TheHitMan
   export KBUILD_BUILD_HOST=ILLYRIA
   export KBUILD_COMPILER_STRING="$(${CC} --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g')"
-  if [ "$PROTON" = "true" ]; then
+  if [ "$WHICH_CLANG" = "PROTON" ]; then
     export PATH="$PARENT_DIR/$KERNEL_DIR/proton-clang/bin:$PATH"
   fi;
   if [ "$WHICH_DEVICE" = "ginkgo" ]; then
@@ -161,7 +152,7 @@ function build() {
   if [ "$WHICH_DEVICE" = "curtana" ]; then
     make O=$out ARCH=arm64 vendor/curtana-perf_defconfig
   fi;
-  if [ "$AOSP" = "true" ]; then
+  if [ "$WHICH_CLANG" = "AOSP" ]; then
     make O=$out ARCH=arm64 \
                 CC=$CC \
                 CLANG_TRIPLE=$CLANG_TRIPLE \
@@ -169,7 +160,7 @@ function build() {
                 CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
                 -j$(nproc --all)
   fi;
-  if [ "$PROTON" = "true" ]; then
+  if [ "$WHICH_CLANG" = "PROTON" ]; then
     make O=$out ARCH=arm64 \
                 CC=$CC \
                 LD=ld.lld \
@@ -187,7 +178,7 @@ function build() {
 
 # Retry on failed compilation
 function ret() {
-  if [ "$AOSP" = "true" ]; then
+  if [ "$WHICH_CLANG" = "AOSP" ]; then
     make O=$out ARCH=arm64 \
                 CC=$CC \
                 CLANG_TRIPLE=$CLANG_TRIPLE \
@@ -195,7 +186,7 @@ function ret() {
                 CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
                 -j$(nproc --all)
   fi;
-  if [ "$PROTON" = "true" ]; then
+  if [ "$WHICH_CLANG" = "PROTON" ]; then
     make O=$out ARCH=arm64 \
                 CC=$CC \
                 LD=ld.lld \
@@ -229,16 +220,12 @@ function zipfile() {
 function cf() {
   cd $PARENT_DIR/$KERNEL_DIR
   file="RIGEL-X-$date-$TOKEN.zip"
-  if [ "$WHICH_DEVICE" = "ginkgo" ]; then
-    curl -T $file "ftp://${user}:${password}@${host}/public_html/Android/$file"
-  fi;
-  if [ "$WHICH_DEVICE" = "curtana" ]; then
-    curl -T $file "ftp://${user}:${password}@${host}/public_html/Android/$file"
-  fi;
+  scp $file ${user}@${host}:/home/dh_ddbfeb/bitgapps.com/downloads/Android
   cd ../..
 }
 
 function mka() {
+  del
   build;
   dtb;
   if [ -f "$KERN_IMG" ]; then

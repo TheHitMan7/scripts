@@ -23,6 +23,12 @@ SOURCE=$PARENT_DIR/$KERNEL_DIR/$CODENAME
 OUT=$PARENT_DIR/$KERNEL_DIR/out
 mkdir -p $PARENT_DIR/$KERNEL_DIR/$CODENAME 2>/dev/null;
 
+# Set Toolchain defaults
+export CC="$PARENT_DIR/$KERNEL_DIR/clang/bin/clang"
+export CLANG_TRIPLE="$PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android/bin/aarch64-maestro-linux-gnu-"
+export CROSS_COMPILE="$PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android/bin/aarch64-maestro-linux-gnu-"
+export CROSS_COMPILE_ARM32="$PARENT_DIR/$KERNEL_DIR/arm-maestro-linux-gnueabi/bin/arm-maestro-linux-gnueabi-"
+
 # Set defaults
 export CREDENTIALS="$1"
 export CLONE="$1"
@@ -39,11 +45,6 @@ fi
 
 # Clone sources
 if [ "$CLONE" == "src" ]; then
-  # Set Toolchain defaults
-  export CC="$PARENT_DIR/$KERNEL_DIR/clang/bin/clang"
-  export CLANG_TRIPLE="$PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android/bin/aarch64-maestro-linux-gnu-"
-  export CROSS_COMPILE="$PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android/bin/aarch64-maestro-linux-gnu-"
-  export CROSS_COMPILE_ARM32="$PARENT_DIR/$KERNEL_DIR/arm-maestro-linux-gnueabi/bin/arm-maestro-linux-gnueabi-"
   # Clone Toolchain Source
   git clone https://github.com/TheHitMan7/clang.git -b master $PARENT_DIR/$KERNEL_DIR/clang 2>/dev/null;
   git clone https://github.com/TheHitMan7/aarch64-maestro-linux-android.git -b master $PARENT_DIR/$KERNEL_DIR/aarch64-maestro-linux-android 2>/dev/null;

@@ -74,6 +74,16 @@ if [ "$COMPILE" == "build" ]; then
               -j$(nproc --all)
 fi
 
+# Re-build kernel
+if [ "$COMPILE" == "ret" ]; then
+  make O=$OUT ARCH=arm64 \
+              CC=$CC \
+              CLANG_TRIPLE=$CLANG_TRIPLE \
+              CROSS_COMPILE=$CROSS_COMPILE \
+              CROSS_COMPILE_ARM32=$CROSS_COMPILE_ARM32 \
+              -j$(nproc --all)
+fi
+
 # Create AnyKernel ZIP
 if [ "$ANYKERNEL" == "ak" ]; then
   read -p "Insert Zip File Token: " TOKEN

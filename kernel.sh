@@ -86,6 +86,8 @@ fi
 
 # Create AnyKernel ZIP
 if [ "$ANYKERNEL" == "ak" ]; then
+  cd $PARENT_DIR/$KERNEL_DIR
+  KERN_IMG="out/arch/arm64/boot/Image.gz-dtb"
   read -p "Insert Zip File Token: " TOKEN
   date=`date +"%Y%m%d"`
   cp -f $KERN_IMG $PARENT_DIR/$KERNEL_DIR/AnyKernel3/Image.gz-dtb

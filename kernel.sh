@@ -61,7 +61,7 @@ if [ "$COMPILE" == "build" ]; then
   cd $SOURCE
   export ARCH=arm64
   export SUBARCH=arm64
-  export LOCALVERSION=RIGEL
+  export LOCALVERSION=
   export KBUILD_BUILD_USER=TheHitMan
   export KBUILD_BUILD_HOST=ILLYRIA
   export KBUILD_COMPILER_STRING="$(${CC} --version | head -n 1 | perl -pe 's/\(http.*?\)//gs' | sed -e 's/  */ /g')"

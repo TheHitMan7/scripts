@@ -41,6 +41,10 @@ if [ "$CREDENTIALS" == "creds" ]; then
   read -p "Enter user: " user
   read -p "Enter pass: " pass
   read -p "Enter host: " host
+  # Export credentials in the global environment
+  export user="$user"
+  export pass="$pass"
+  export host="$host"
 fi
 
 # Clone sources

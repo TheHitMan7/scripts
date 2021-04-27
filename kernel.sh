@@ -91,6 +91,7 @@ if [ "$ANYKERNEL" == "ak" ]; then
   read -p "Insert Zip File Token: " TOKEN
   export TOKEN="$TOKEN"
   date=`date +"%Y%m%d"`
+  export date="$date"
   cp -f $KERN_IMG $PARENT_DIR/$KERNEL_DIR/AnyKernel3/Image.gz-dtb
   cd $PARENT_DIR/$KERNEL_DIR/AnyKernel3
   zip -r9 RIGEL-X.zip *

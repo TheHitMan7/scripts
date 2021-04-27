@@ -101,6 +101,6 @@ fi
 if [ "$SERVER" == "dh" ]; then
   cd $PARENT_DIR/$KERNEL_DIR
   file="RIGEL-X-$date-$TOKEN.zip"
-  curl -T $file "ftp://${user}:${pass}@${host}/bitgapps.com/downloads/Android"
+  curl -T $file "ftp://${user}:${pass}@${host}/bitgapps.com/downloads/Android/$file"
   cd ../..
 fi
